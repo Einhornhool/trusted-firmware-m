@@ -123,15 +123,25 @@ static void process_data(const void* buf, size_t length)
 
     /* Wait for the DMA to complete (The SYM_DMA_COMPLETED interrupt to be
      * asserted)
+     * On CC310 SYM_DMA_COMPLETED does not exist, so we wait for MEM_TO_DIN_INT or
+     * DOUT_TO_MEM_INT instead.
      */
-    while (!(P_CC3XX->host_rgf.host_rgf_irr & 0x800U)) {
+    if (dma_state.block_buf_needs_output)
+        while (!(P_CC3XX->host_rgf.host_rgf_irr & 0x80U)) {
 #ifdef CC3XX_CONFIG_DMA_WFI_WAIT_ENABLE
-        __asm("WFI");
+            __asm("WFI");
 #endif /* CC3XX_CONFIG_WFI_WAIT_ENABLE */
+        }
+    else {
+        while (!(P_CC3XX->host_rgf.host_rgf_irr & 0x40U)) {
+#ifdef CC3XX_CONFIG_DMA_WFI_WAIT_ENABLE
+            __asm("WFI");
+#endif /* CC3XX_CONFIG_WFI_WAIT_ENABLE */
+        }
     }
 
     /* Reset the SYM_DMA_COMPLETED interrupt */
-    P_CC3XX->host_rgf.host_rgf_icr = 0x800U;
+    P_CC3XX->host_rgf.host_rgf_icr = 0xC0U;
 
     /* Disable the DMA clock */
     P_CC3XX->misc.dma_clk_enable = 0x0U;

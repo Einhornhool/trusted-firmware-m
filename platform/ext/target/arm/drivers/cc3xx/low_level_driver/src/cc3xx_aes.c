@@ -447,8 +447,10 @@ cc3xx_err_t cc3xx_lowlevel_aes_init(
     assert(((uintptr_t)iv & 0b11) == 0);
 
     /* Check larger keys are supported */
-    assert(P_CC3XX->host_rgf.host_boot & (1 << 28)); /* SUPPORT_256_192_KEY_LOCAL */
-    assert(P_CC3XX->aes.aes_hw_flags & 1); /* SUPPORT_256_192_KEY */
+    if (key_size > 16) {
+        assert(P_CC3XX->host_rgf.host_boot & (1 << 28)); /* SUPPORT_256_192_KEY_LOCAL */
+        assert(P_CC3XX->aes.aes_hw_flags & 1); /* SUPPORT_256_192_KEY */
+    }
 
 #ifdef CC3XX_CONFIG_DFA_MITIGATIONS_ENABLE
     /* Check if the DFA alarm is tripped, if applicable. This disables the AES
@@ -734,9 +736,9 @@ static void configure_engine_for_authed_data(bool *write_output)
 #endif /* CC3XX_CONFIG_AES_CMAC_ENABLE */
 #if defined(CC3XX_CONFIG_AES_CCM_ENABLE)
     case CC3XX_AES_MODE_CCM:
-#endif /* defined(CC3XX_CONFIG_AES_CCM_ENABLE) */
         cc3xx_lowlevel_set_engine(CC3XX_ENGINE_AES);
         break;
+#endif /* defined(CC3XX_CONFIG_AES_CCM_ENABLE) */
     default:
         return;
     }
@@ -826,7 +828,6 @@ static void configure_engine_for_crypted_data(bool *write_output)
 #endif /* CC3XX_CONFIG_AES_CMAC_ENABLE */
 #ifdef CC3XX_CONFIG_AES_CCM_ENABLE
     case CC3XX_AES_MODE_CCM:
-#endif /* CC3XX_CONFIG_AES_CCM_ENABLE */
 #ifdef CC3XX_CONFIG_AES_TUNNELLING_ENABLE
         set_mode(CC3XX_AES_MODE_CTR);
         set_tun1_mode(CC3XX_AES_MODE_CBC_MAC);
@@ -850,6 +851,7 @@ static void configure_engine_for_crypted_data(bool *write_output)
         *write_output = false;
         return;
 #endif /* CC3XX_CONFIG_AES_TUNNELLING_ENABLE */
+#endif /* CC3XX_CONFIG_AES_CCM_ENABLE */
         break;
     default:
         cc3xx_lowlevel_set_engine(CC3XX_ENGINE_AES);
@@ -1130,9 +1132,9 @@ cc3xx_err_t cc3xx_lowlevel_aes_finish(uint32_t *tag, size_t *size)
 #endif /* CC3XX_CONFIG_AES_CMAC_ENABLE */
 #ifdef CC3XX_CONFIG_AES_CCM_ENABLE
     case CC3XX_AES_MODE_CCM:
-#endif /* CC3XX_CONFIG_AES_CCM_ENABLE */
         err = ccm_finish(tag);
         break;
+#endif /* CC3XX_CONFIG_AES_CCM_ENABLE */
     default:
         break;
     }
